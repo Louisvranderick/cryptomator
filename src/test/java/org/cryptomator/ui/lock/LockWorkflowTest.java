@@ -48,6 +48,13 @@ class LockWorkflowTest {
         MockitoAnnotations.openMocks(this);
     }
 
+    /***
+     * Test lock without force
+     *
+     * This test verifies the lock method without force by calling the lock method with force set to false.
+     * The outcome of this test is the lock method called with force set to false.
+     * The vault should still be locked after the call.
+     */
     @Test
     @DisplayName("Test lock without force")
     void testLockWithoutForce() throws Exception {
@@ -56,6 +63,14 @@ class LockWorkflowTest {
         verify(vault).lock(false);
     }
 
+    /***
+     * Test lock failure
+     *
+     * This test verifies the lock method failure by throwing an IllegalStateException.
+     * The outcome of this test is the IllegalStateException thrown by the lock method.
+     *
+     * @throws Exception
+     */
     @Test
     @DisplayName("Test lock failure")
     void testLockFailure() throws Exception {
