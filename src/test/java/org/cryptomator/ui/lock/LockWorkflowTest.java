@@ -55,6 +55,13 @@ class LockWorkflowTest {
         when(mockLockForcedScene.get()).thenReturn(mock(Scene.class));
     }
 
+    /***
+     * Test lock without force
+     *
+     * This test verifies the lock method without force by calling the lock method with force set to false.
+     * The outcome of this test is the lock method called with force set to false.
+     * The vault should still be locked after the call.
+     */
     @Test
     void testLockWithoutForce() {
         // Arrange - Créer une instance de LockWorkflow
@@ -75,6 +82,14 @@ class LockWorkflowTest {
         verify(mockAppWindows, never()).showErrorWindow(any(), any(), any());
     }
 
+    /***
+     * Test lock failure
+     *
+     * This test verifies the lock method failure by throwing an IllegalStateException.
+     * The outcome of this test is the IllegalStateException thrown by the lock method.
+     *
+     * @throws Exception
+     */
     @Test
     void testLockFailureWithGenericException() {
         // Arrange - Créer une exception générique de test

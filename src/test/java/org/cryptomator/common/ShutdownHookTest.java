@@ -15,7 +15,16 @@ class ShutdownHookTest {
 	void setUp() {
 		shutdownHook = new ShutdownHook();
 	}
-
+	
+	/***
+	 * Test tasks executed in correct order
+	 *
+	 * This test verifies that tasks are executed in the correct order
+	 * by adding tasks with different priorities to the shutdown hook.
+	 * 
+	 * The outcome of this test is the tasks being executed in the
+	 * correct order.
+	 */
 	@Test
 	void testTasksExecutedInCorrectOrder() {
 		// Arrange
@@ -36,7 +45,14 @@ class ShutdownHookTest {
 		inOrder.verify(task3).run();
 	}
 
-
+	/***
+	 * Test tasks executed during shutdown
+	 *
+	 * This test verifies that tasks are executed during shutdown
+	 * by adding a task to the shutdown hook and calling the run method.
+	 *
+	 * The outcome of this test is the task being executed.
+	 */
 	@Test
 	void testTasksExecutedDuringShutdown() {
 		// Arrange
