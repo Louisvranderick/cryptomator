@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -22,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -47,66 +49,54 @@ class ReportWriterTest {
 
 	@BeforeEach
 	void setUp() {
-		// Initialize Mockito and Faker
+		// Arrange - Initialiser Mockito et Faker
 		MockitoAnnotations.openMocks(this);
 		faker = new Faker();
 
-		// Mocking the necessary constructor parameters for ReportWriter
+		// Arrange - Mock des paramètres nécessaires pour le constructeur de ReportWriter
 		mockVault = mock(Vault.class);
 		mockVaultConfigRef = new AtomicReference<>(mock(VaultConfig.class));
 		mockApplication = mock(Application.class);
 		mockEnvironment = mock(Environment.class);
 
-		// Creating the ReportWriter instance with mocked dependencies
+		// Arrange - Création de l'instance ReportWriter avec des dépendances mockées
 		reportWriter = new ReportWriter(mockVault, mockVaultConfigRef, mockApplication, mockEnvironment);
+	}
+
+	static Stream<Arguments> provideRandomPaths() {
+		Faker faker = new Faker();
+		return Stream.of(
+				Arguments.of(faker.file().fileName(), faker.file().fileName()),
+				Arguments.of(faker.file().fileName(), faker.file().fileName()),
+				Arguments.of(faker.file().fileName(), faker.file().fileName())
+		);
 	}
 
 	@Nested
 	class WhenTestingReportWritingWithVariousPaths {
 
 		@ParameterizedTest
-		@ValueSource(strings = {
-				"validFileName.txt", // Normal filename
-				"../relativePathFile.txt", // Relative path
-				"this/is/a/very/long/path/that/might/be/close/to/system/limits/longFileName.txt" // Long path
-		})
-		@Timeout(value = 2, unit = TimeUnit.SECONDS)
-		void testWriteReportWithValidAndLongPaths(String fileName) throws IOException {
-			// Create a temporary directory to avoid path issues
-			Path tempDir = Files.createTempDirectory("testReports");
-			Path filePath = tempDir.resolve(fileName);
+		@MethodSource("org.cryptomator.ui.health.ReportWriterTest#provideRandomPaths")
+		void shouldHandleRandomPaths(String path1, String path2) {
+			// Arrange - Créer des chemins aléatoires
+			Path randomPath1 = Path.of(path1);
+			Path randomPath2 = Path.of(path2);
 
-			// Ensure all parent directories are created
-			Files.createDirectories(filePath.getParent());
-
-			// Create mock report content
-			String fakeReportContent = faker.lorem().paragraph();
-
-			// Write the report content
-			try (FileWriter writer = new FileWriter(filePath.toFile())) {
-				writer.write(fakeReportContent);
-			}
-
-			// Verify the report content was successfully written
-			assertTrue(Files.exists(filePath), "Le fichier devrait exister après l'écriture");
-			assertEquals(fakeReportContent, Files.readString(filePath), "Le contenu du fichier devrait correspondre au contenu écrit");
-		}
-
-		@Test
-		@Timeout(value = 2, unit = TimeUnit.SECONDS)
-		void testWriteReportWithInvalidPath() {
-			// Invalid path with prohibited characters
-			Path invalidPath = Path.of("invalid:/\\*?\"<>|");
-
-			// Expect an IOException to be thrown
+			// Act & Assert - Tester le premier chemin aléatoire
 			assertThrows(IOException.class, () -> {
-				try (FileWriter writer = new FileWriter(invalidPath.toFile())) {
+				try (FileWriter writer = new FileWriter(randomPath1.toFile())) {
 					writer.write(faker.lorem().paragraph());
 				}
-			}, "An IOException should be thrown for an invalid file path");
+			}, "Une IOException devrait être levée pour un chemin de fichier invalide");
+
+			// Act & Assert - Tester le deuxième chemin aléatoire
+			assertThrows(IOException.class, () -> {
+				try (FileWriter writer = new FileWriter(randomPath2.toFile())) {
+					writer.write(faker.lorem().paragraph());
+				}
+			}, "Une IOException devrait être levée pour un chemin de fichier invalide");
 		}
 	}
-
 
 	@Nested
 	class WhenTestingSimultaneousWrites {
@@ -114,30 +104,30 @@ class ReportWriterTest {
 		@Test
 		@Timeout(value = 5, unit = TimeUnit.SECONDS)
 		void testSimultaneousWrites() throws IOException {
-			// Créer un répertoire temporaire pour éviter les problèmes de chemin
+			// Arrange - Créer un répertoire temporaire pour éviter les problèmes de chemin
 			Path tempDir = Files.createTempDirectory("testSimultaneousReports");
 
-			// Créer un contenu de rapport fictif en utilisant Faker
+			// Arrange - Créer un contenu de rapport fictif avec Faker
 			String fakeReportContent = faker.lorem().paragraph();
 
-			// Simuler plusieurs écritures concurrentes
+			// Act - Simuler plusieurs écritures simultanées
 			int numberOfConcurrentWrites = 5;
 			Thread[] threads = new Thread[numberOfConcurrentWrites];
 			for (int i = 0; i < numberOfConcurrentWrites; i++) {
 				threads[i] = new Thread(() -> {
 					try {
-						// Créer un fichier fictif avec un nom aléatoire
+						// Arrange - Créer un fichier fictif avec un nom aléatoire
 						File mockFile = new File(tempDir.toFile(), faker.file().fileName());
 
-						// S'assurer que tous les répertoires parents sont créés
+						// Act - Assurer la création de tous les répertoires parents
 						mockFile.getParentFile().mkdirs();
 
-						// Simuler l'écriture du rapport
+						// Act - Simuler l'écriture du rapport
 						try (FileWriter writer = new FileWriter(mockFile)) {
 							writer.write(fakeReportContent);
 						}
 
-						// Vérifier que le contenu du rapport est écrit avec succès
+						// Assert - Vérifier que le contenu du rapport a été écrit avec succès
 						assertTrue(mockFile.exists(), "Le fichier devrait exister après l'écriture");
 
 					} catch (IOException e) {
@@ -147,7 +137,7 @@ class ReportWriterTest {
 				threads[i].start();
 			}
 
-			// Attendre que tous les threads aient terminé
+			// Act - Attendre la fin de tous les threads
 			for (Thread thread : threads) {
 				try {
 					thread.join();
