@@ -2,8 +2,11 @@
 
 ### IFT3913 Tâche 2 
 
-#### Louis Vranderick 
+#### Louis Vranderick et Ramzy Youcef Ammouri
 
+[HyperLink pour test de Health](https://github.com/Louisvranderick/cryptomator/tree/448de0188941bd7683dd96b69e887c08cedac433/src/test/java/org/cryptomator/ui/health)
+
+[HyperLink pour test de Lock](https://github.com/Louisvranderick/cryptomator/tree/448de0188941bd7683dd96b69e887c08cedac433/src/test/java/org/cryptomator/ui/health)
 
 1. **Test : shouldSetCheckStateToScheduledWhenBatchExecuted**
   - **Oracle** : Ce test vérifie que l'état des contrôles est correctement mis à "SCHEDULED" lorsque l'exécution d'un lot de contrôles est déclenchée.
