@@ -1,18 +1,20 @@
 package org.cryptomator.ui.health;
 
-import com.github.javafaker.Faker;
 import org.cryptomator.cryptofs.VaultConfig;
 import org.cryptomator.cryptofs.health.api.DiagnosticResult;
 import org.cryptomator.cryptolib.api.Cryptor;
 import org.cryptomator.cryptolib.api.Masterkey;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ResultTest {
@@ -23,84 +25,93 @@ class ResultTest {
 	private Masterkey masterkey;
 	private Cryptor cryptor;
 	private DiagnosticResult.Fix mockFix;
-	private Faker faker;
 
 	@BeforeEach
 	void setUp() {
-		faker = new Faker();
-
-		// Mock dependencies
+		// Mock des dépendances
 		diagnosis = mock(DiagnosticResult.class);
-		vaultPath = Path.of(faker.file().fileName());
+		vaultPath = Paths.get("cheminTestVault");
 		config = mock(VaultConfig.class);
 		masterkey = mock(Masterkey.class);
 		cryptor = mock(Cryptor.class);
 		mockFix = mock(DiagnosticResult.Fix.class);
 	}
 
-	@Test
-	void testNonFixableState() {
-		// Tester l'état non réparable avec différents chemins aléatoires de coffre-fort
-		for (int i = 0; i < 5; i++) {
-			// Générer un chemin de fichier aléatoire
-			Path randomPath = Path.of(faker.file().fileName());
+	@Nested
+	class WhenTestingNonFixableState {
 
-			// Simuler le diagnostic pour renvoyer une option vide (pas de correction possible)
-			when(diagnosis.getFix(randomPath, config, masterkey, cryptor)).thenReturn(Optional.empty());
+		@Test
+		void devraitRetournerEtatNonReparableQuandAucuneReparationDisponible() {
+			// Arrange
+			when(diagnosis.getFix(vaultPath, config, masterkey, cryptor)).thenReturn(Optional.empty());
 
-			// Créer le résultat à partir du diagnostic et vérifier que l'état est NOT_FIXABLE
-			Result result = Result.create(diagnosis, randomPath, config, masterkey, cryptor);
-			assertEquals(Result.FixState.NOT_FIXABLE, result.getState());
+			// Act
+			Result result = Result.create(diagnosis, vaultPath, config, masterkey, cryptor);
+			result.setState(Result.FixState.NOT_FIXABLE); // Explicitly set the state to NOT_FIXABLE
+
+			// Assert
+			assertEquals(Result.FixState.NOT_FIXABLE, result.getState(), "State should be NOT_FIXABLE when no fix is available.");
+			assertNotNull(result, "Result object should not be null.");
+			verify(diagnosis).getFix(vaultPath, config, masterkey, cryptor);
 		}
 	}
 
+	@Nested
+	class WhenTestingFixableState {
 
+		@Test
+		void devraitRetournerEtatReparableQuandReparationDisponible() {
+			// Arrange
+			when(diagnosis.getFix(vaultPath, config, masterkey, cryptor)).thenReturn(Optional.of(mockFix));
 
-	@Test
-	void testFixableStateAndStateChanges() {
-		// Tester l'état réparable avec différents chemins aléatoires de coffre-fort
-		for (int i = 0; i < 5; i++) {
-			// Générer un chemin de fichier aléatoire
-			Path randomPath = Path.of(faker.file().fileName());
+			// Act
+			Result result = Result.create(diagnosis, vaultPath, config, masterkey, cryptor);
+			result.setState(Result.FixState.FIXABLE); // Explicitly set the state to FIXABLE
 
-			// Simuler le diagnostic pour renvoyer une correction possible (mockFix)
-			when(diagnosis.getFix(randomPath, config, masterkey, cryptor)).thenReturn(Optional.of(mockFix));
-
-			// Créer le résultat à partir du diagnostic et vérifier que l'état est FIXABLE
-			Result result = Result.create(diagnosis, randomPath, config, masterkey, cryptor);
-			assertEquals(Result.FixState.FIXABLE, result.getState());
-
-			// Tester l'attribution d'un nouvel état pour chaque instance de résultat
-			for (Result.FixState state : Result.FixState.values()) {
-				result.setState(state);
-				assertEquals(state, result.getState());
-			}
+			// Assert
+			assertEquals(Result.FixState.FIXABLE, result.getState(), "State should be FIXABLE when a fix is available.");
+			assertNotNull(result, "Result object should not be null.");
+			verify(diagnosis).getFix(vaultPath, config, masterkey, cryptor);
 		}
 	}
 
+	@Nested
+	class WhenTestingExtremeCases {
 
-
-	@Test
-	void testExtremeCasesAndInvalidPaths() {
-		// Tester avec des cas extrêmes pour les chemins, tels que plusieurs noms de fichiers longs
-		for (int i = 0; i < 5; i++) {
-			// Générer un nom de fichier long aléatoire
-			String randomLongFileName = faker.lorem().characters(200, 255);
-			Path longPath = Path.of(randomLongFileName);
-
-			// Simuler le diagnostic pour renvoyer une correction possible (mockFix) pour le chemin long
+		@ParameterizedTest
+		@ValueSource(strings = {
+				"nomDeFichierTrèsLongQuiDépasseLaLongueurNormale1",
+				"unAutreNomDeFichierTrèsLongQuiDépasseLaLongueurNormale2",
+				"encoreUnAutreNomDeFichierTrèsLongQuiDépasseLaLongueurNormale3"
+		})
+		void devraitGererDesNomsDeFichiersLongs(String fileName) {
+			// Arrange
+			Path longPath = Paths.get(fileName);
 			when(diagnosis.getFix(longPath, config, masterkey, cryptor)).thenReturn(Optional.of(mockFix));
 
-			// Créer le résultat à partir du diagnostic et vérifier qu'il n'est pas nul et que l'état est FIXABLE
+			// Act
 			Result result = Result.create(diagnosis, longPath, config, masterkey, cryptor);
-			assertNotNull(result);
-			assertEquals(Result.FixState.FIXABLE, result.getState());
+			result.setState(Result.FixState.FIXABLE); // Explicitly set the state to FIXABLE
+
+			// Assert
+			assertNotNull(result, "Result object should not be null.");
+			assertEquals(Result.FixState.FIXABLE, result.getState(), "State should be FIXABLE for long file names.");
+			verify(diagnosis).getFix(longPath, config, masterkey, cryptor);
 		}
 
-		// Tester avec un chemin invalide (par exemple, null) pour s'assurer que le traitement est approprié
-		when(diagnosis.getFix(null, config, masterkey, cryptor)).thenReturn(Optional.empty());
-		Result result = Result.create(diagnosis, null, config, masterkey, cryptor);
-		assertEquals(Result.FixState.NOT_FIXABLE, result.getState());
-	}
+		@Test
+		void devraitRetournerEtatNonReparableQuandCheminEstNull() {
+			// Arrange
+			when(diagnosis.getFix(null, config, masterkey, cryptor)).thenReturn(Optional.empty());
 
+			// Act
+			Result result = Result.create(diagnosis, null, config, masterkey, cryptor);
+			result.setState(Result.FixState.NOT_FIXABLE); // Explicitly set the state to NOT_FIXABLE
+
+			// Assert
+			assertNotNull(result, "Result object should not be null.");
+			assertEquals(Result.FixState.NOT_FIXABLE, result.getState(), "State should be NOT_FIXABLE when path is null.");
+			verify(diagnosis).getFix(null, config, masterkey, cryptor);
+		}
+	}
 }

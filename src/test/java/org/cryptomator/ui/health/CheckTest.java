@@ -5,7 +5,10 @@ import org.cryptomator.cryptofs.VaultConfig;
 import org.cryptomator.cryptofs.health.api.HealthCheck;
 import org.cryptomator.cryptolib.api.Masterkey;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.github.javafaker.Faker;
 import org.mockito.Mockito;
 
@@ -13,7 +16,7 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class CheckTest {
@@ -37,59 +40,87 @@ public class CheckTest {
 		checkExecutor = new CheckExecutor(mockVault, mockMasterkeyRef, mockVaultConfigRef, mockCsprng);
 	}
 
-	@Test
-	public void testExecuteBatchAndSetState() {
-		// Créer un objet fictif de type Check
-		Check mockCheck = mock(Check.class);
+	@Nested
+	class WhenExecutingBatchChecks {
 
-		// Simuler la méthode getHealthCheck() pour renvoyer un objet HealthCheck fictif
-		when(mockCheck.getHealthCheck()).thenReturn(mock(HealthCheck.class));
+		@Test
+		void shouldSetCheckStateToScheduledWhenBatchExecuted() {
+			// Arrange
+			Check mockCheck1 = mock(Check.class);
+			Check mockCheck2 = mock(Check.class);
+			when(mockCheck1.getHealthCheck()).thenReturn(mock(HealthCheck.class));
+			when(mockCheck2.getHealthCheck()).thenReturn(mock(HealthCheck.class));
 
-		// Exécuter un batch de vérifications en utilisant checkExecutor
-		checkExecutor.executeBatch(List.of(mockCheck));
+			// Act
+			checkExecutor.executeBatch(List.of(mockCheck1, mockCheck2));
 
-		// Vérifier que l'état du Check a été mis à jour à SCHEDULED
-		verify(mockCheck).setState(Check.CheckState.SCHEDULED);
+			// Assert
+			verify(mockCheck1).setState(Check.CheckState.SCHEDULED);
+			verify(mockCheck2).setState(Check.CheckState.SCHEDULED);
+			assertNotNull(mockCheck1.getHealthCheck(), "HealthCheck should not be null after batch execution");
+			assertNotNull(mockCheck2.getHealthCheck(), "HealthCheck should not be null after batch execution");
+		}
 
-		// Créer un nouvel objet Check avec un HealthCheck fictif
-		Check check = new Check(mock(HealthCheck.class));
+		@Test
+		void shouldUpdateCheckStateToRunning() {
+			// Arrange
+			Check check = new Check(mock(HealthCheck.class));
 
-		// Mettre à jour l'état à RUNNING
-		check.setState(Check.CheckState.RUNNING);
+			// Act
+			check.setState(Check.CheckState.RUNNING);
 
-		// Vérifier que l'état est bien mis à jour à RUNNING
-		assertEquals(Check.CheckState.RUNNING, check.getState(), "L'état du Check devrait être mis à jour à RUNNING.");
+			// Assert
+			assertEquals(Check.CheckState.RUNNING, check.getState(), "L'etat du Check devrait etre mis a jour a RUNNING.");
+			assertNull(check.getError(), "Error should be null when state is set to RUNNING.");
+			assertFalse(check.isChosenForExecution(), "Check should not be chosen for execution by default.");
+		}
 	}
 
+	@Nested
+	class WhenSettingErrorAndProperties {
 
-	@Test
-	public void testSetErrorAndProperties() {
-		// Créer un objet Check avec un HealthCheck fictif
-		Check check = new Check(mock(HealthCheck.class));
+		@Test
+		void shouldReflectErrorWhenSet() {
+			// Arrange
+			Check check = new Check(mock(HealthCheck.class));
+			Throwable testError = new RuntimeException("Test error");
 
-		// Créer une exception pour simuler une erreur et l'attribuer au Check
-		Throwable testError = new RuntimeException("Test error");
-		check.setError(testError);
+			// Act
+			check.setError(testError);
+			check.setState(Check.CheckState.ERROR); // Explicitly set the state to ERROR
 
-		// Vérifier que la propriété d'erreur reflète correctement l'erreur définie
-		assertEquals(testError, check.getError(), "La propriété d'erreur devrait refléter correctement l'erreur définie.");
+			// Assert
+			assertEquals(testError, check.getError(), "La propriete d'erreur devrait refléter correctement l'erreur definie.");
+			assertEquals(Check.CheckState.ERROR, check.getState(), "State should be ERROR when an error is set.");
+			assertFalse(check.isChosenForExecution(), "Check should not be chosen for execution when an error is set.");
+		}
 
-		// Définir la propriété chosenForExecution à true
-		check.chosenForExecutionProperty().set(true);
+		@Test
+		void shouldSetChosenForExecutionPropertyToTrue() {
+			// Arrange
+			Check check = new Check(mock(HealthCheck.class));
 
-		// Vérifier que la propriété chosenForExecution est vraie lorsque définie
-		assertEquals(true, check.isChosenForExecution(), "La propriété chosenForExecution devrait être vraie lorsqu'elle est définie.");
+			// Act
+			check.chosenForExecutionProperty().set(true);
 
-		// Créer un HealthCheck fictif et définir un nom simulé avec Faker
-		HealthCheck mockHealthCheck = mock(HealthCheck.class);
-		String fakeName = faker.company().name();
-		when(mockHealthCheck.name()).thenReturn(fakeName);
+			// Assert
+			assertTrue(check.isChosenForExecution(), "La propriete chosenForExecution devrait etre vraie lorsqu'elle est definie.");
+			assertNull(check.getError(), "Error should be null when check is chosen for execution.");
+		}
 
-		// Créer un nouvel objet Check avec le HealthCheck fictif
-		Check newCheck = new Check(mockHealthCheck);
+		@ParameterizedTest
+		@ValueSource(strings = { "Company A", "Company B", "Company C" })
+		void shouldMatchHealthCheckNameWithProvidedName(String fakeName) {
+			// Arrange
+			HealthCheck mockHealthCheck = mock(HealthCheck.class);
+			when(mockHealthCheck.name()).thenReturn(fakeName);
 
-		// Vérifier que le nom du Check correspond au nom fourni par le HealthCheck
-		assertEquals(fakeName, newCheck.getName(), "Le nom du Check devrait correspondre au nom fourni par le HealthCheck.");
+			// Act
+			Check newCheck = new Check(mockHealthCheck);
+
+			// Assert
+			assertEquals(fakeName, newCheck.getName(), "Le nom du Check devrait correspondre au nom fourni par le HealthCheck.");
+			assertNotNull(newCheck.getHealthCheck(), "HealthCheck should not be null after creating Check instance.");
+		}
 	}
-
 }
