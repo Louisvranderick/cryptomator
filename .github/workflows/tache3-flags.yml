@@ -1,0 +1,57 @@
+name: Test with Different JVM Flags
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        flag:
+          - "-XX:+UseG1GC"
+          - "-XX:+AlwaysPreTouch"
+          - "-XX:+TieredCompilation"
+          - "-XX:+PrintGCDetails"
+          - "-XX:MaxInlineLevel=15"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '22'
+
+      - name: Install Maven
+        run: sudo apt-get install -y maven
+
+      - name: Set JVM Flag and Run Tests
+        env:
+          MAVEN_OPTS: ${{ matrix.flag }}
+        run: |
+          echo "Running tests with JVM flag: $MAVEN_OPTS"
+          mvn clean test jacoco:report  # Exécute les tests et génère le rapport de couverture
+        continue-on-error: true  # Si un test échoue, continue d'exécuter le workflow pour obtenir les logs
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.flag }}
+          path: target/surefire-reports
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report-${{ matrix.flag }}
+          path: target/site/jacoco  # Jacoco génère le rapport de couverture ici
