@@ -59,5 +59,7 @@ jobs:
           else
             echo "New coverage: $coverage%"
           fi
-
+      - name: Funny joke
+        run: |
+          echo "what do you call this ['S','u','n','s','h','i','n','e']? an array of sunshine"
 
