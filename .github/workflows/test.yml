@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         flag:
-          - "-XX:+UseStringDeduplication"  
+          - "-XX:+OptimizeStringConcat"  
           - "-XX:+AlwaysPreTouch"
           - "-XX:+TieredCompilation"
           - "-XX:+PrintGCDetails"
@@ -59,12 +59,6 @@ jobs:
             echo "New coverage: $coverage%"
           fi
 
-      - name: Upload test results and coverage
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: "test-results-${{ matrix.flag }}"
-          path: target/surefire-reports
 
       - name: Upload coverage report
         if: always()
