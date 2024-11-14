@@ -60,9 +60,3 @@ jobs:
           fi
 
 
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: "coverage-report-${{ matrix.flag }}"
-          path: target/site/jacoco
