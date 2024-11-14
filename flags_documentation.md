@@ -1,6 +1,6 @@
 ## Exécution des Tests avec Différents Flags JVM
 
-Ce workflow exécute les tests avec plusieurs configurations de flags JVM, intégrées dans le fichier `test.yaml`, pour évaluer leur impact sur les performances et la couverture de code.
+Ce workflow exécute les tests avec plusieurs configurations de flags JVM, intégrées dans le fichier [test.yml](https://github.com/Louisvranderick/cryptomator/blob/develop/.github/workflows/test.yml) , pour évaluer leur impact sur les performances et la couverture de code.
 
 ### Flags Utilisés et Justification
 
@@ -12,7 +12,7 @@ Ce workflow exécute les tests avec plusieurs configurations de flags JVM, inté
 
 ### Résultats et Processus
 
-Les résultats de chaque test et les rapports de couverture de code sont maintenant générés et analysés dans le fichier `test.yaml`. L'exécution des tests avec chaque flag est automatisée grâce à une matrice de flags, et les rapports de couverture sont calculés avec JaCoCo.
+Les résultats de chaque test et les rapports de couverture de code sont maintenant générés et analysés dans le fichier [test.yml](https://github.com/Louisvranderick/cryptomator/blob/develop/.github/workflows/test.yml). L'exécution des tests avec chaque flag est automatisée grâce à une matrice de flags, et les rapports de couverture sont calculés avec JaCoCo.
 
 Les étapes principales incluent :
 1. **Compilation et Tests** : Chaque configuration de flag est utilisée pour exécuter le build et les tests en utilisant `xvfb-run mvn -B verify -Djavafx.platform=linux jacoco:report -Pcoverage`.
