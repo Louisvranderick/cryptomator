@@ -59,6 +59,13 @@ jobs:
           else
             echo "New coverage: $coverage%"
           fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: "coverage-report-${{ matrix.flag }}"
+          path: target/site/jacoco
       - name: Funny joke
         run: |
           echo "what do you call this ['S','u','n','s','h','i','n','e']? an array of sunshine"
